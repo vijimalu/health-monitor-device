@@ -2,6 +2,7 @@
  * Project Name: Health Monitoring System
  * Micro-controller: Arduino UNO
  * Created On: 17 May 2020
+ * Created by: Vijitha V Nair
  */
 
 #define USE_ARDUINO_INTERRUPTS true    // Set-up low-level interrupts for most acurate BPM math.
@@ -25,10 +26,15 @@ int heartBeatSensor = A0;
 int Threshold = 550;
 
 // Function declaration
+void serialMonitorInitialisation();
 void heartBeatSensorInitialisation();
+void displayMonitorInitialDisplay();
+
+int getHeartBeat();
 
 void setup() {
   serialMonitorInitialisation();
+  displayMonitorInitialDisplay();
   heartBeatSensorInitialisation();
 }
 
@@ -37,21 +43,45 @@ void loop() {
   delay(1000);
 }
 
-**************************************************************
-// The following function will be used for initialising sensor
-**************************************************************
+/**************************************************************
+The following function will be used for initialising sensor
+**************************************************************/
 // Function to initialise serial monitor
 void serialMonitorInitialisation() {
   Serial.begin(9600);
+  Serial.println("**************************************");
+  Serial.println("Project Name: Health Monitoring System");
+  Serial.println("Created By: Vijitha V Nair (LTVE17MCA071) <vijithaprabha321@gmail.com>");
+  Serial.println("Created on: 17 May 2020");
+  Serial.println("**************************************");
   Serial.println("Serial monitor initialisation complete...");
 }
 
-// Function to initialise oled
-void oledInitialisation() {
+void displayMonitorInitialDisplay() {
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
     Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
+    for(;;);
   }
+
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(25,0);
+  display.println(F("Health"));
+  display.setCursor(23,18);
+  display.println(F("Monitor"));
+  display.display();
+  delay(1000);
+
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(4,0);
+  display.println(F("By,"));
+  display.setCursor(10,18);
+  display.println(F("Vijitha V"));
+  display.display();
+  delay(2000);
 }
 
 // Heart beat sensor initilaisation
@@ -64,9 +94,10 @@ void heartBeatSensorInitialisation() {
   }
 }
 
-*****************************************************************
-// The following function will be used for get values from sensor
-*****************************************************************
+/*****************************************************************
+The following function will be used for get values from sensor
+*****************************************************************/
+
 // Function to get heart beat from sensor
 int getHeartBeat() {
   int heartBeat = pulseSensor.getBeatsPerMinute();
