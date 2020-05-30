@@ -1,68 +1,67 @@
 /*
  * Project Name: Health Monitoring System
  * Micro-controller: Arduino UNO
- * Created On: 17 May 2020
+ * Created On: 30 May 2020
  * Created by: Vijitha V Nair
  */
+// GPS module library
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
 
+// Pulse sensor library
 #define USE_ARDUINO_INTERRUPTS true    // Set-up low-level interrupts for most acurate BPM math.
 #include <PulseSensorPlayground.h>     // Includes the PulseSensorPlayground Library.
 
-PulseSensorPlayground pulseSensor;  // Creates an instance of the PulseSensorPlayground object called "pulseSensor"
-
+// OLED library
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
-
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+static const int RXPin = 13, TXPin = 12;
+static const uint32_t GPSBaud = 4800;
+static const uint32_t serialPort = 115200;
+static const uint32_t bluetoothSerialRate = 9600;
 
 int heartBeatSensor = A0;
 int Threshold = 550;
 
-// Function declaration
-void serialMonitorInitialisation();
-void heartBeatSensorInitialisation();
-void displayMonitorInitialDisplay();
+TinyGPSPlus gps; // The TinyGPS++ object
+SoftwareSerial ss(RXPin, TXPin); // The serial connection to the GPS device
+PulseSensorPlayground pulseSensor; // Creates an instance of the PulseSensorPlayground object called "pulseSensor"
+SoftwareSerial bluetoothSerial(11, 10); // RX, TX
 
-int getHeartBeat();
+
+/* For GPS */
+float latitude , longitude;
+int year , month , date, hour , minute , second;
+String date_str , time_str , lat_str , lng_str;
+int heartBeat;
 
 void setup() {
-  serialMonitorInitialisation();
-  displayMonitorInitialDisplay();
-  heartBeatSensorInitialisation();
-}
+  Serial.begin(serialPort);
+  
+  ss.begin(GPSBaud);
+  Serial.println("GPS module initialisation complete...");
 
-void loop() {
-  Serial.println(getHeartBeat());
-  delay(1000);
-}
+  pulseSensor.analogInput(heartBeatSensor);
+  pulseSensor.blinkOnPulse(LED_BUILTIN);
+  pulseSensor.setThreshold(Threshold);
+  if (pulseSensor.begin()) {
+    Serial.println("Heat beat sensor initialisation complete...");  //This prints one time at Arduino power-up,  or on Arduino reset.  
+  }
 
-/**************************************************************
-The following function will be used for initialising sensor
-**************************************************************/
-// Function to initialise serial monitor
-void serialMonitorInitialisation() {
-  Serial.begin(9600);
-  Serial.println("**************************************");
-  Serial.println("Project Name: Health Monitoring System");
-  Serial.println("Created By: Vijitha V Nair (LTVE17MCA071) <vijithaprabha321@gmail.com>");
-  Serial.println("Created on: 17 May 2020");
-  Serial.println("**************************************");
-  Serial.println("Serial monitor initialisation complete...");
-}
+  bluetoothSerial.begin(bluetoothSerialRate);
 
-void displayMonitorInitialDisplay() {
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
     Serial.println(F("SSD1306 allocation failed"));
     for(;;);
   }
-
   display.clearDisplay();
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
@@ -84,24 +83,108 @@ void displayMonitorInitialDisplay() {
   delay(2000);
 }
 
-// Heart beat sensor initilaisation
-void heartBeatSensorInitialisation() {
-  pulseSensor.analogInput(heartBeatSensor);
-  pulseSensor.blinkOnPulse(LED_BUILTIN);
-  pulseSensor.setThreshold(Threshold);
-  if (pulseSensor.begin()) {
-    Serial.println("Heat beat sensor initialisation complete....");  //This prints one time at Arduino power-up,  or on Arduino reset.  
-  }
-}
+void loop() {
+  // This sketch displays information every time a new sentence is correctly encoded.
+  while (ss.available() > 0)
+  
+  if (gps.encode(ss.read()))
+    if (gps.location.isValid()) {
+      latitude = gps.location.lat();
+      lat_str = String(latitude , 6);
+      longitude = gps.location.lng();
+      lng_str = String(longitude , 6);
+    }
+    if (gps.date.isValid()) {
+      date_str = "";
+      date = gps.date.day();
+      month = gps.date.month();
+      year = gps.date.year();
+  
+      if (date < 10)
+        date_str = '0';
+      date_str += String(date);
+  
+      date_str += "/";
+  
+      if (month < 10)
+        date_str += '0';
+      date_str += String(month);
+  
+      date_str += "/";
+  
+      if (year < 10)
+        date_str += '0';
+      date_str += String(year);
+    }
+  
+    if (gps.time.isValid()) {
+      time_str = "";
+      hour = gps.time.hour();
+      minute = gps.time.minute();
+      second = gps.time.second();
+  
+      if (hour < 10)
+        time_str = '0';
+      time_str += String(hour);
+  
+      time_str += ":";
+  
+      if (minute < 10)
+        time_str += '0';
+      time_str += String(minute);
+  
+      time_str += ":";
+  
+      if (second < 10)
+        time_str += '0';
+      time_str += String(second);
+    }
+    
+  heartBeat=pulseSensor.getBeatsPerMinute();
 
-/*****************************************************************
-The following function will be used for get values from sensor
-*****************************************************************/
-
-// Function to get heart beat from sensor
-int getHeartBeat() {
-  int heartBeat = pulseSensor.getBeatsPerMinute();
-  if (pulseSensor.sawStartOfBeat()) { 
-   return heartBeat;
+  if (lat_str == "") {
+    lat_str = "loading";
   }
+  if (lng_str == "") {
+    lng_str = "loading";
+  }
+  if (date_str == "") {
+    date_str = "loading";
+  }
+  if (time_str == "") {
+    time_str = "loading";
+  }
+
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);
+  display.println(date_str);
+  display.setCursor(0,18);
+  display.println(heartBeat);
+  display.display();
+
+  bluetoothSerial.print(lat_str);
+  bluetoothSerial.print(",");
+  bluetoothSerial.print(lng_str);
+  bluetoothSerial.print(",");
+  bluetoothSerial.print(date_str);
+  bluetoothSerial.print(",");
+  bluetoothSerial.print(time_str);
+  bluetoothSerial.print(",");
+  bluetoothSerial.print(heartBeat);
+  bluetoothSerial.print(";");
+
+
+
+  Serial.println("----------------------------------------");
+  Serial.println("Values:-");
+  Serial.print("Lattitude: ");Serial.println(lat_str);
+  Serial.print("Longitude: ");Serial.println(lng_str);
+  Serial.print("Date: ");Serial.println(date_str);
+  Serial.print("Time: ");Serial.println(time_str);
+  Serial.print("Heatbeat: ");Serial.println(heartBeat);
+  Serial.println("----------------------------------------");
+
+  delay(500);
 }
