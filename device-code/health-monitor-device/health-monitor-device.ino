@@ -4,6 +4,7 @@
  * Created On: 30 May 2020
  * Created by: Vijitha V Nair
  */
+ 
 // GPS module library
 #include <TinyGPS++.h>
 #include <SoftwareSerial.h>
@@ -42,11 +43,17 @@ float latitude , longitude;
 int year , month , date, hour , minute , second;
 String date_str , time_str , lat_str , lng_str;
 int heartBeat;
+float bodyTemp = 36.6;
 
 void setup() {
   Serial.begin(serialPort);
-  
+  Serial.println("Health Monitoring System");
+  Serial.println("Project by Vijitha V Nair");
   ss.begin(GPSBaud);
+  if (millis() > 5000 && gps.charsProcessed() < 10) {
+    Serial.println(F("No GPS detected: check wiring."));
+    while(true);
+  }
   Serial.println("GPS module initialisation complete...");
 
   pulseSensor.analogInput(heartBeatSensor);
@@ -173,6 +180,8 @@ void loop() {
   bluetoothSerial.print(time_str);
   bluetoothSerial.print(",");
   bluetoothSerial.print(heartBeat);
+  bluetoothSerial.print(",");
+  bluetoothSerial.print(bodyTemp);
   bluetoothSerial.print(";");
 
 
@@ -184,6 +193,7 @@ void loop() {
   Serial.print("Date: ");Serial.println(date_str);
   Serial.print("Time: ");Serial.println(time_str);
   Serial.print("Heatbeat: ");Serial.println(heartBeat);
+  Serial.print("Body Temperature: ");Serial.println(bodyTemp);
   Serial.println("----------------------------------------");
 
   delay(500);
