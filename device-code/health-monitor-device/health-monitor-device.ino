@@ -46,6 +46,7 @@ int heartBeat;
 float bodyTemp = 36.6;
 
 void setup() {
+  pinMode(3,INPUT_PULLUP);
   Serial.begin(serialPort);
   Serial.println("Health Monitoring System");
   Serial.println("Project by Vijitha V Nair");
@@ -171,20 +172,15 @@ void loop() {
   display.println(heartBeat);
   display.display();
 
-  bluetoothSerial.print(lat_str);
-  bluetoothSerial.print(",");
-  bluetoothSerial.print(lng_str);
-  bluetoothSerial.print(",");
-  bluetoothSerial.print(date_str);
-  bluetoothSerial.print(",");
-  bluetoothSerial.print(time_str);
-  bluetoothSerial.print(",");
-  bluetoothSerial.print(heartBeat);
-  bluetoothSerial.print(",");
-  bluetoothSerial.print(bodyTemp);
-  bluetoothSerial.print(";");
-
-
+  bluetoothSerial.write(latitude);
+  bluetoothSerial.write(",");
+  bluetoothSerial.write(longitude);
+  bluetoothSerial.write(",");
+  bluetoothSerial.write(heartBeat);
+  bluetoothSerial.write(",");
+  bluetoothSerial.write(bodyTemp);
+  bluetoothSerial.write(",");
+  bluetoothSerial.write(digitalRead(3));
 
   Serial.println("----------------------------------------");
   Serial.println("Values:-");
@@ -194,6 +190,7 @@ void loop() {
   Serial.print("Time: ");Serial.println(time_str);
   Serial.print("Heatbeat: ");Serial.println(heartBeat);
   Serial.print("Body Temperature: ");Serial.println(bodyTemp);
+   Serial.print("Button status: ");Serial.println(digitalRead(3));
   Serial.println("----------------------------------------");
 
   delay(500);
